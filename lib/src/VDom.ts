@@ -37,21 +37,30 @@ export class VDom {
   }
 
   public static update({
-    updatedVirtualNode,
-    prevVirtualNode,
+    componentFunc,
     node,
+    prevVirtualNode,
+    updatedVirtualNode,
   }: {
-    updatedVirtualNode: MaltaElement;
-    prevVirtualNode: MaltaElement;
+    componentFunc?: MaltaComponent;
     node: HTMLElement;
+    prevVirtualNode: MaltaElement;
+    updatedVirtualNode: MaltaElement;
   }) {
     const { content: updatedContent } = updatedVirtualNode;
     const { content: prevContent } = prevVirtualNode;
 
     if (prevVirtualNode.tag !== updatedVirtualNode?.tag) {
-      const newNode = this.mount(updatedVirtualNode);
-      if (newNode) {
-        node.replaceWith(newNode);
+      if (componentFunc) {
+        const memoized = Memo.get(componentFunc);
+        if (memoized?.node) {
+          node.replaceWith(memoized.node);
+        }
+      } else {
+        const newNode = this.mount(updatedVirtualNode);
+        if (newNode) {
+          node.replaceWith(newNode);
+        }
       }
     }
 
@@ -84,6 +93,7 @@ export class VDom {
             StateStack.setContext(updatedVirtualNodeContent);
 
             this.update({
+              componentFunc: updatedVirtualNodeContent,
               node: node.children[index] as HTMLElement,
               prevVirtualNode: memoizedPrevVnode as MaltaElement,
               updatedVirtualNode: enhanceNode(updatedVNode),
@@ -93,6 +103,7 @@ export class VDom {
             const updatedVNode = Memo.get(updatedVirtualNodeContent);
             if (updatedVNode) {
               this.update({
+                componentFunc: updatedVirtualNodeContent,
                 node: node.children[index] as HTMLElement,
                 prevVirtualNode: prevVirtualNodeContent as MaltaElement,
                 updatedVirtualNode: updatedVNode.vNode,

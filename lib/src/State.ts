@@ -57,6 +57,7 @@ export function State<T>(
 
       for (const component of subscribers) {
         const memoizedComponent = Memo.get(component);
+        console.log(Memo.stack, component);
         if (memoizedComponent) {
           memoizedComponent?.memoized.state.setState(index, initialValue);
           Memo.last = component;
