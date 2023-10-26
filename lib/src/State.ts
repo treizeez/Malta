@@ -1,6 +1,7 @@
 import { Memo, MemoizedComponent } from "./Memo";
 import { VDom } from "./VDom";
 import { MaltaComponent } from "./types";
+import enhanceNode from "./utils/enhannceNode";
 
 export class StateStack {
   private static data: Set<Function> = new Set();
@@ -35,22 +36,6 @@ export class StateStack {
   }
 }
 
-export class StateMemo {
-  private _value: any;
-
-  constructor(value: any) {
-    this._value = value;
-  }
-
-  public get value() {
-    return this._value;
-  }
-
-  public updateValue(newValue: any): void {
-    this._value = newValue;
-  }
-}
-
 export function State<T>(
   arg: T
 ): [() => T, (value: T | ((prev: T) => T)) => void] {
@@ -59,6 +44,8 @@ export function State<T>(
   let initialValue: T = arg;
 
   const index = StateStack.increaseIndex();
+
+  let invoked = false;
 
   function setState(value: T | ((prev: T) => T)) {
     if (value !== initialValue) {
@@ -74,8 +61,10 @@ export function State<T>(
           memoizedComponent?.memoized.state.setState(index, initialValue);
           Memo.last = component;
           const prevVirtualNode = memoizedComponent.vNode;
-          const updatedVirtualNode = component();
+          const updatedVirtualNode = enhanceNode(component());
           StateStack.setContext(component);
+          StateStack.reset();
+          Memo.last = null;
 
           VDom.update({
             updatedVirtualNode,
@@ -84,15 +73,15 @@ export function State<T>(
           });
 
           memoizedComponent?.updateNode(updatedVirtualNode);
-          StateStack.reset();
-          Memo.last = null;
         }
       }
     }
   }
 
   function getState(): T {
-    StateStack.push(getState);
+    if (!invoked) {
+      StateStack.push(getState);
+    }
     if (this) {
       const component: MaltaComponent = this;
       subscribers.add(component);
@@ -101,6 +90,7 @@ export function State<T>(
         const state = memoizedComponent?.memoized.state;
         state?.setState(index, arg);
       }
+      invoked = true;
     }
 
     if (Memo.last) {

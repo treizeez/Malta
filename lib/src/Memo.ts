@@ -1,9 +1,9 @@
-import { StateMemo } from "./State";
 import { MaltaComponent, MaltaElement } from "./types";
+import enhanceNode from "./utils/enhannceNode";
 
 class Cache {
   public size: number = 0;
-  private _cached: Map<number, StateMemo> = new Map();
+  private _cached: Map<number, any> = new Map();
 
   public get cached() {
     return this._cached;
@@ -43,7 +43,7 @@ export class MemoizedComponent {
   }
 
   public updateNode(vNode: MaltaElement): void {
-    this._vNode = vNode;
+    this._vNode = enhanceNode(vNode);
   }
 
   public mount() {

@@ -2,13 +2,15 @@ import { Dom } from "./Dom";
 import { Memo, MemoizedComponent } from "./Memo";
 import { StateStack } from "./State";
 import { MaltaComponent, MaltaElement } from "./types";
+import enhanceNode from "./utils/enhannceNode";
 import { isFunction } from "./utils/isFunction";
 
 type mountInput = MaltaComponent | MaltaElement;
 
 export class VDom {
   public static mount(input: mountInput): HTMLElement {
-    const vNode: MaltaElement = isFunction<mountInput>(input);
+    StateStack.reset();
+    const vNode: MaltaElement = enhanceNode(isFunction<mountInput>(input));
     const dom = new Dom(vNode);
 
     dom.create();
@@ -19,14 +21,10 @@ export class VDom {
     if (typeof input === "function") {
       Memo.push(input, vNode, dom.node);
       StateStack.setContext(input);
-      StateStack.reset();
       Memo.get(input)?.mount();
     }
 
-    if (vNode?.content) {
-      if (!Array.isArray(vNode?.content)) {
-        vNode.content = [vNode?.content];
-      }
+    if (Array.isArray(vNode.content)) {
       vNode.content.map((content) => {
         if (typeof content !== "boolean") {
           const mounted = this.mount(content);
@@ -52,7 +50,9 @@ export class VDom {
 
     if (prevVirtualNode.tag !== updatedVirtualNode?.tag) {
       const newNode = this.mount(updatedVirtualNode);
-      newNode && node.replaceWith(newNode);
+      if (newNode) {
+        node.replaceWith(newNode);
+      }
     }
 
     const updatedNode = new Dom(updatedVirtualNode, node);
@@ -64,38 +64,56 @@ export class VDom {
 
         while (!updatedVirtualNodeContent && node.children[index]) {
           node.children[index].remove();
+          if (typeof prevVirtualNodeContent === "function") {
+            this.unmount(prevVirtualNodeContent);
+          }
         }
 
         if (node.children[index]) {
-          const memoizedPrev =
-            typeof prevVirtualNodeContent === "function" &&
-            Memo.get(prevVirtualNodeContent);
-
           if (
-            typeof prevVirtualNodeContent === "function" &&
-            typeof updatedVirtualNodeContent === "function"
+            typeof updatedVirtualNodeContent === "function" &&
+            typeof prevVirtualNodeContent === "function"
           ) {
-            if (memoizedPrev) {
-              Memo.replace(prevVirtualNodeContent, updatedVirtualNodeContent);
-              Memo.last = updatedVirtualNodeContent;
-            }
             StateStack.reset();
-          }
+            const memoizedPrevVnode = Memo.get(prevVirtualNodeContent)?.vNode;
+            Memo.replace(prevVirtualNodeContent, updatedVirtualNodeContent);
+            Memo.last = updatedVirtualNodeContent;
+            const updatedVNode = updatedVirtualNodeContent();
 
-          const updatedVNode = isFunction(updatedVirtualNodeContent);
-
-          if (typeof updatedVirtualNodeContent === "function") {
             Memo.get(updatedVirtualNodeContent)?.updateNode(updatedVNode);
             StateStack.setContext(updatedVirtualNodeContent);
-          }
 
-          this.update({
-            node: node.children[index] as HTMLElement,
-            prevVirtualNode: memoizedPrev
-              ? memoizedPrev.vNode
-              : isFunction(prevVirtualNodeContent),
-            updatedVirtualNode: updatedVNode,
-          });
+            this.update({
+              node: node.children[index] as HTMLElement,
+              prevVirtualNode: memoizedPrevVnode as MaltaElement,
+              updatedVirtualNode: enhanceNode(updatedVNode),
+            });
+          } else if (typeof updatedVirtualNodeContent === "function") {
+            this.mount(updatedVirtualNodeContent);
+            const updatedVNode = Memo.get(updatedVirtualNodeContent);
+            if (updatedVNode) {
+              this.update({
+                node: node.children[index] as HTMLElement,
+                prevVirtualNode: prevVirtualNodeContent as MaltaElement,
+                updatedVirtualNode: updatedVNode.vNode,
+              });
+            }
+          } else if (typeof prevVirtualNodeContent === "function") {
+            const memoPrevNode = Memo.get(prevVirtualNodeContent);
+            if (memoPrevNode) {
+              this.update({
+                node: node.children[index] as HTMLElement,
+                prevVirtualNode: memoPrevNode.vNode as MaltaElement,
+                updatedVirtualNode: updatedVirtualNodeContent,
+              });
+            }
+          } else {
+            this.update({
+              node: node.children[index] as HTMLElement,
+              prevVirtualNode: prevVirtualNodeContent as MaltaElement,
+              updatedVirtualNode: updatedVirtualNodeContent,
+            });
+          }
         }
       }
 
@@ -119,6 +137,9 @@ export class VDom {
         }
       }
     }
+
+    StateStack.reset();
+    Memo.last = null;
   }
 
   public static unmount(component: MaltaComponent) {
