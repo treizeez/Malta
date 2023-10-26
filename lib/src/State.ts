@@ -1,7 +1,6 @@
-import { Memo, MemoizedComponent } from "./Memo";
+import { Memo } from "./Memo";
 import { VDom } from "./VDom";
 import { MaltaComponent } from "./types";
-import enhanceNode from "./utils/enhannceNode";
 
 export class StateStack {
   private static data: Set<Function> = new Set();
@@ -36,16 +35,12 @@ export class StateStack {
   }
 }
 
-export function State<T>(
-  arg: T
-): [() => T, (value: T | ((prev: T) => T)) => void] {
+export function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
   const subscribers: Set<MaltaComponent> = new Set();
 
   let initialValue: T = arg;
 
   const index = StateStack.increaseIndex();
-
-  let invoked = false;
 
   function setState(value: T | ((prev: T) => T)) {
     if (value !== initialValue) {
@@ -55,53 +50,40 @@ export function State<T>(
         initialValue = value;
       }
 
-      for (const component of subscribers) {
-        const memoizedComponent = Memo.get(component);
-        console.log(Memo.stack, component);
+      for (const componentFunc of subscribers) {
+        const memoizedComponent = Memo.get(componentFunc);
         if (memoizedComponent) {
-          memoizedComponent?.memoized.state.setState(index, initialValue);
-          Memo.last = component;
+          memoizedComponent.memoized.state.setState(index, initialValue);
           const prevVirtualNode = memoizedComponent.vNode;
-          const updatedVirtualNode = enhanceNode(component());
-          StateStack.setContext(component);
-          StateStack.reset();
-          Memo.last = null;
+          const updatedVirtualNode = memoizedComponent.component();
 
           VDom.update({
             updatedVirtualNode,
             prevVirtualNode,
             node: memoizedComponent?.node,
           });
-
-          memoizedComponent?.updateNode(updatedVirtualNode);
         }
       }
     }
   }
 
   function getState(): T {
-    if (!invoked) {
-      StateStack.push(getState);
-    }
+    StateStack.push(getState);
     if (this) {
       const component: MaltaComponent = this;
       subscribers.add(component);
-      const memoizedComponent = Memo.get(component);
-      if (!memoizedComponent?.mounted) {
-        const state = memoizedComponent?.memoized.state;
-        state?.setState(index, arg);
-      }
-      invoked = true;
     }
 
     if (Memo.last) {
       const memoizedComponent = Memo.get(Memo.last);
       const val = memoizedComponent?.memoized.state.cached.get(index) as T;
-      initialValue = val;
+      if (val) {
+        initialValue = val;
+      }
     }
 
     return initialValue;
   }
 
-  return [getState, setState];
+  return [getState(), setState];
 }

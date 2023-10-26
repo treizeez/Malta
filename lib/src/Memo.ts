@@ -18,6 +18,7 @@ export class MemoizedComponent {
   private _vNode: MaltaElement;
   private _node: HTMLElement;
   public mounted: boolean = false;
+  public component: MaltaComponent;
 
   private _memoized: {
     state: Cache;
@@ -37,18 +38,19 @@ export class MemoizedComponent {
     return this._node;
   }
 
-  constructor(vNode: MaltaElement, node: HTMLElement) {
-    this._vNode = vNode;
+  constructor(
+    vNode: MaltaElement,
+    node: HTMLElement,
+    component: MaltaComponent
+  ) {
     this._node = node;
+    this._vNode = vNode;
+    this.component = component;
+    this.mounted = true;
   }
 
   public updateNode(vNode: MaltaElement): void {
     this._vNode = enhanceNode(vNode);
-  }
-
-  public mount() {
-    this.mounted = true;
-    this._memoized.state.size = this._memoized.state.cached.size;
   }
 }
 
@@ -66,21 +68,25 @@ export class Memo {
 
   public static push(
     component: MaltaComponent,
-    vNode: MaltaElement,
-    node: HTMLElement
+    componentFunc: MaltaComponent,
+    node: HTMLElement,
+    vNode: MaltaElement
   ): void {
-    const memoized = new MemoizedComponent(vNode, node);
-    this._stack.set(component, memoized);
+    const memoized = new MemoizedComponent(vNode, node, component);
+    this._stack.set(componentFunc, memoized);
   }
 
   public static replace(
-    prevComponent: MaltaComponent,
-    updatedComponent: MaltaComponent
+    component: MaltaComponent,
+    prevComponentFunc: MaltaComponent,
+    updatedComponentFunc: MaltaComponent
   ) {
-    const memoized = this._stack.get(prevComponent);
-    this._stack.delete(prevComponent);
+    const memoized = this._stack.get(prevComponentFunc);
+    console.log(this._stack.get(updatedComponentFunc));
+    this._stack.delete(prevComponentFunc);
     if (memoized) {
-      this._stack.set(updatedComponent, memoized);
+      memoized.component = component;
+      this._stack.set(updatedComponentFunc, memoized);
     }
   }
 

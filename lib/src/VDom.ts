@@ -1,16 +1,19 @@
 import { Dom } from "./Dom";
-import { Memo, MemoizedComponent } from "./Memo";
-import { StateStack } from "./State";
-import { MaltaComponent, MaltaElement } from "./types";
+import { Memo } from "./Memo";
 import enhanceNode from "./utils/enhannceNode";
-import { isFunction } from "./utils/isFunction";
+import createComponent from "./utils/createComponent";
+import { MaltaComponent, MaltaElement } from "./types";
 
 type mountInput = MaltaComponent | MaltaElement;
 
 export class VDom {
   public static mount(input: mountInput): HTMLElement {
-    StateStack.reset();
-    const vNode: MaltaElement = enhanceNode(isFunction<mountInput>(input));
+    const component: MaltaComponent =
+      typeof input === "function" && createComponent.bind(null, input);
+
+    const vNode: MaltaElement = component
+      ? component()
+      : enhanceNode(input as MaltaElement);
     const dom = new Dom(vNode);
 
     dom.create();
@@ -19,9 +22,7 @@ export class VDom {
     dom.textNode();
 
     if (typeof input === "function") {
-      Memo.push(input, vNode, dom.node);
-      StateStack.setContext(input);
-      Memo.get(input)?.mount();
+      Memo.push(component, input, dom.node, vNode);
     }
 
     if (Array.isArray(vNode.content)) {
@@ -83,20 +84,23 @@ export class VDom {
             typeof updatedVirtualNodeContent === "function" &&
             typeof prevVirtualNodeContent === "function"
           ) {
-            StateStack.reset();
+            const updatedVNodeContentComponent = createComponent.bind(
+              null,
+              updatedVirtualNodeContent
+            );
             const memoizedPrevVnode = Memo.get(prevVirtualNodeContent)?.vNode;
-            Memo.replace(prevVirtualNodeContent, updatedVirtualNodeContent);
-            Memo.last = updatedVirtualNodeContent;
-            const updatedVNode = updatedVirtualNodeContent();
-
-            Memo.get(updatedVirtualNodeContent)?.updateNode(updatedVNode);
-            StateStack.setContext(updatedVirtualNodeContent);
+            Memo.replace(
+              updatedVNodeContentComponent,
+              prevVirtualNodeContent,
+              updatedVirtualNodeContent
+            );
+            const updatedVNodeContent = updatedVNodeContentComponent();
 
             this.update({
               componentFunc: updatedVirtualNodeContent,
               node: node.children[index] as HTMLElement,
               prevVirtualNode: memoizedPrevVnode as MaltaElement,
-              updatedVirtualNode: enhanceNode(updatedVNode),
+              updatedVirtualNode: enhanceNode(updatedVNodeContent),
             });
           } else if (typeof updatedVirtualNodeContent === "function") {
             this.mount(updatedVirtualNodeContent);
@@ -148,9 +152,6 @@ export class VDom {
         }
       }
     }
-
-    StateStack.reset();
-    Memo.last = null;
   }
 
   public static unmount(component: MaltaComponent) {
