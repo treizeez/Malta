@@ -1,41 +1,13 @@
+import UI from "./UI";
+import Stack from "./Stack";
 import { Memo } from "./Memo";
-import { VDom } from "./VDom";
 import { MaltaComponent } from "./types";
 
-export class StateStack {
-  private static data: Set<Function> = new Set();
-  private static _index: number = -1;
+const StateStack = new Stack();
 
-  public static get stack(): Set<Function> {
-    return this.data;
-  }
+Memo.registerStack(StateStack);
 
-  public static increaseIndex(): number {
-    this._index++;
-    return this._index;
-  }
-
-  public static push(component: Function): void {
-    this.data.add(component);
-  }
-
-  public static reset(): void {
-    this.data.clear();
-    this._index = -1;
-  }
-
-  public static get index() {
-    return this._index;
-  }
-
-  public static setContext(context: MaltaComponent): void {
-    for (const state of this.data) {
-      state.apply(context);
-    }
-  }
-}
-
-export function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
+function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
   const subscribers: Set<MaltaComponent> = new Set();
 
   let initialValue: T = arg;
@@ -56,8 +28,7 @@ export function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
           memoizedComponent.memoized.state.setState(index, initialValue);
           const prevVirtualNode = memoizedComponent.vNode;
           const updatedVirtualNode = memoizedComponent.component();
-
-          VDom.update({
+          UI.update({
             updatedVirtualNode,
             prevVirtualNode,
             node: memoizedComponent?.node,
@@ -71,6 +42,10 @@ export function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
     StateStack.push(getState);
     if (this) {
       const component: MaltaComponent = this;
+      const memoizedComponent = Memo.get(component);
+      if (!memoizedComponent?.mounted) {
+        memoizedComponent?.memoized.state.setState(index, arg);
+      }
       subscribers.add(component);
     }
 
@@ -87,3 +62,5 @@ export function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
 
   return [getState(), setState];
 }
+
+export default State;

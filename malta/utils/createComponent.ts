@@ -1,11 +1,11 @@
 import { Memo } from "../Memo";
-import { StateStack } from "../State";
+import enhanceNode from "./enhanceNode";
 import { MaltaComponent, MaltaElement } from "../types";
-import enhanceNode from "./enhannceNode";
 
-const createComponent = (componentFunc: MaltaComponent): MaltaElement => {
-  Memo.last = null;
-  StateStack.reset();
+function createComponent(): MaltaElement {
+  const componentFunc: MaltaComponent = this;
+
+  Memo.resetStack();
   const memoized = Memo.get(componentFunc);
 
   if (memoized?.mounted) {
@@ -13,15 +13,18 @@ const createComponent = (componentFunc: MaltaComponent): MaltaElement => {
   }
 
   const vNode = componentFunc();
-  StateStack.setContext(componentFunc);
-  Memo.last = null;
-  StateStack.reset();
+
+  if (!memoized) {
+    Memo.push(componentFunc, vNode);
+  }
+
+  Memo.setStackContext(componentFunc);
 
   if (memoized?.mounted) {
-    memoized.updateNode(vNode);
+    memoized.updateVNode(vNode);
   }
 
   return enhanceNode(vNode);
-};
+}
 
 export default createComponent;

@@ -1,5 +1,5 @@
-import { State } from "../lib/src/State.ts";
-import { Render } from "../lib/src/index.ts";
+import { State } from "../malta";
+import { Render } from "../malta-dom";
 
 const nestedNestedNested = () => {
   const [state, setState] = State(1);
@@ -44,6 +44,7 @@ const AddTodo = ({ todos, setTodos }) => ({
       {
         id: todos.length,
         name: "test",
+        key: window.crypto.randomUUID(),
       },
     ]),
 });
@@ -53,7 +54,10 @@ const Todos = ({ todos, setTodos }) => {
     tag: "div",
     content:
       todos.length > 0
-        ? todos.map((todo) => Todo.bind(null, { todo, todos, setTodos }))
+        ? todos.map((todo) => ({
+            key: todo.key,
+            component: Todo.bind(null, { todo, todos, setTodos }),
+          }))
         : {
             tag: "h1",
             textNode: "no todos",
@@ -62,7 +66,18 @@ const Todos = ({ todos, setTodos }) => {
 };
 
 const App = () => {
-  const [todos, setTodos] = State([]);
+  const [todos, setTodos] = State([
+    {
+      name: "test",
+      id: 0,
+      key: window.crypto.randomUUID(),
+    },
+    {
+      name: "test",
+      id: 1,
+      key: window.crypto.randomUUID(),
+    },
+  ]);
 
   const [test, setTest] = State(1);
 
