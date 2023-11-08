@@ -15,12 +15,22 @@ export const Render = (
   UI.init<HTMLElement>(VDom.update);
   if (Array.isArray(input)) {
     input.forEach((node) => {
-      const mounted = VDom.mount(node);
-      mounted && root.appendChild(mounted);
+      if (node) {
+        const mounted = VDom.mount(node);
+        if (mounted) {
+          root.appendChild(mounted);
+        } else {
+          throw new Error("Nothing was mounted");
+        }
+      }
     });
     return;
   }
 
-  const mounted = VDom.mount(input);
-  mounted && root.appendChild(mounted);
+  if (input) {
+    const mounted = VDom.mount(input);
+    mounted && root.appendChild(mounted);
+  } else {
+    throw new Error("Nothing was passed into the Render function");
+  }
 };

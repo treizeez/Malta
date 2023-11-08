@@ -65,6 +65,16 @@ const Todos = ({ todos, setTodos }) => {
   };
 };
 
+const Dialog = () => {
+  const [state, setState] = State("Im dialog");
+
+  return {
+    tag: "div",
+    textNode: state,
+    onclick: () => setState("Im dialog too"),
+  };
+};
+
 const App = () => {
   const [todos, setTodos] = State([
     {
@@ -80,6 +90,7 @@ const App = () => {
   ]);
 
   const [test, setTest] = State(1);
+  const [showDialog, setShowDialog] = State(false);
 
   const state = {
     todos,
@@ -94,6 +105,13 @@ const App = () => {
         textNode: `Clicked: ${test} times`,
         onClick: () => setTest((prev) => prev + 1),
       },
+      {
+        tag: "button",
+        textNode: showDialog ? "close" : "open",
+        onClick: () => setShowDialog(!showDialog),
+      },
+
+      showDialog && Dialog.bind(null),
       AddTodo.bind(null, state),
       Todos.bind(null, state),
     ],

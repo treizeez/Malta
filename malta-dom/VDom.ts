@@ -33,9 +33,11 @@ export class VDom {
 
     if (Array.isArray(vNode.content)) {
       vNode.content.map((content) => {
-        const mounted = VDom.mount(content);
-        if (mounted) {
-          dom.node.appendChild(mounted);
+        if (content) {
+          const mounted = VDom.mount(content);
+          if (mounted) {
+            dom.node.appendChild(mounted);
+          }
         }
       });
     }
@@ -64,7 +66,7 @@ export class VDom {
           node.replaceWith(memoized.node);
         }
       } else {
-        const newNode = this.mount(updatedVirtualNode);
+        const newNode = VDom.mount(updatedVirtualNode);
         if (newNode) {
           node.replaceWith(newNode);
         }
@@ -74,12 +76,52 @@ export class VDom {
     const updatedNode = new Dom(updatedVirtualNode, node);
 
     if (Array.isArray(updatedContent) && Array.isArray(prevContent)) {
-      let cleanPrevContent = prevContent;
+      let cleanPrevContent = prevContent.filter(Boolean);
+      let cleanUpdatedContent = updatedContent.filter(Boolean);
 
-      if (prevContent.length > updatedContent.length) {
-        while (cleanPrevContent.length !== updatedContent.length) {
+      const toInsert: {
+        index: number;
+        mounted: HTMLElement;
+      }[] = [];
+
+      if (updatedContent.length > cleanPrevContent.length) {
+        const indiciesToRemove: number[] = [];
+        for (let index = 0; index < updatedContent.length; index++) {
+          if (!prevContent[index] && typeof prevContent[index] === "boolean") {
+            if (updatedContent[index]) {
+              indiciesToRemove.push(index);
+              const mounted = VDom.mount(updatedContent[index]);
+              toInsert.push({ index, mounted });
+            }
+          }
+        }
+        indiciesToRemove.reverse().forEach((index) => {
+          cleanUpdatedContent.splice(index, 1);
+        });
+      }
+
+      if (prevContent.length > cleanUpdatedContent.length) {
+        const indiciesToRemove: number[] = [];
+        for (let index = 0; index < prevContent.length; index++) {
+          if (
+            !updatedContent[index] &&
+            typeof updatedContent[index] === "boolean"
+          ) {
+            if (prevContent[index]) {
+              indiciesToRemove.push(index);
+            }
+          }
+        }
+        indiciesToRemove.reverse().forEach((index) => {
+          cleanPrevContent.splice(index, 1);
+          node.children[index].remove();
+          VDom.unmount(getComponent(prevContent[index] as MaltaComponent));
+        });
+      }
+
+      if (cleanPrevContent.length > cleanUpdatedContent.length) {
+        while (cleanPrevContent.length !== cleanUpdatedContent.length) {
           const indicesToRemove: number[] = [];
-
           cleanPrevContent.forEach((prev, index) => {
             const fragmentIndex = updatedContent.findIndex(
               (next) => next.key === prev.key
@@ -102,14 +144,14 @@ export class VDom {
         }
       }
 
-      if (updatedContent.length > prevContent.length) {
-        for (const index in updatedContent) {
-          if (!prevContent[index]) {
-            const mounted = this.mount(updatedContent[index]);
+      if (cleanUpdatedContent.length > cleanPrevContent.length) {
+        for (const index in cleanUpdatedContent) {
+          if (!cleanPrevContent[index]) {
+            const mounted = VDom.mount(cleanUpdatedContent[index]);
 
             if (mounted) {
-              const keyToInsert = updatedContent[index].key;
-              const insertIndex = prevContent.findIndex(
+              const keyToInsert = cleanUpdatedContent[index].key;
+              const insertIndex = cleanPrevContent.findIndex(
                 (item) => item.key === keyToInsert
               );
 
@@ -124,16 +166,16 @@ export class VDom {
       }
 
       for (let index = 0; index < cleanPrevContent.length; index++) {
-        if (cleanPrevContent[index] && updatedContent[index]) {
+        if (cleanPrevContent[index] && cleanUpdatedContent[index]) {
           if (
-            checkIfComponent(updatedContent[index]) &&
+            checkIfComponent(cleanUpdatedContent[index]) &&
             checkIfComponent(cleanPrevContent[index])
           ) {
             const prevFunc = getComponent(
               cleanPrevContent[index] as MaltaComponent
             );
             const updatedFunc = getComponent(
-              updatedContent[index] as MaltaComponent
+              cleanUpdatedContent[index] as MaltaComponent
             );
 
             Memo.replace(
@@ -154,9 +196,9 @@ export class VDom {
               prevVirtualNode: prevNode as MaltaElement,
               updatedVirtualNode: updatedNode as MaltaElement,
             });
-          } else if (checkIfComponent(updatedContent[index])) {
+          } else if (checkIfComponent(cleanUpdatedContent[index])) {
             const updatedFunc = getComponent(
-              updatedContent[index] as MaltaComponent
+              cleanUpdatedContent[index] as MaltaComponent
             );
             this.mount(updatedFunc);
             const updatedVNode = Memo.get(updatedFunc as MaltaComponent);
@@ -175,18 +217,22 @@ export class VDom {
               VDom.update({
                 node: node.children[index] as HTMLElement,
                 prevVirtualNode: memoPrevNode.vNode as MaltaElement,
-                updatedVirtualNode: updatedContent[index] as MaltaElement,
+                updatedVirtualNode: cleanUpdatedContent[index] as MaltaElement,
               });
             }
           } else {
             VDom.update({
               node: node.children[index] as HTMLElement,
               prevVirtualNode: cleanPrevContent[index] as MaltaElement,
-              updatedVirtualNode: updatedContent[index] as MaltaElement,
+              updatedVirtualNode: cleanUpdatedContent[index] as MaltaElement,
             });
           }
         }
       }
+
+      toInsert.forEach(({ index, mounted }) => {
+        node.insertBefore(mounted, node.children[index]);
+      });
     }
 
     updatedNode.initEvents();
