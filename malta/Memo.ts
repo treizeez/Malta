@@ -1,6 +1,6 @@
 import Stack from "./Stack";
 import enhanceNode from "./utils/enhanceNode";
-import { MaltaComponent } from "./types";
+import { MaltaComponent, MaltaElementBase } from "./types";
 import checkIfComponent from "./utils/checkIfComponent";
 import getComponent from "./utils/getComponent";
 
@@ -17,8 +17,8 @@ class Cache {
   }
 }
 
-export class MemoizedComponent<T = any, K = {}> {
-  private _vNode: K;
+export class MemoizedComponent<T = any, K extends MaltaElementBase<K> = {}> {
+  private _vNode: MaltaElementBase<K>;
   private _node: T;
   public mounted: boolean = false;
   public component: MaltaComponent;
@@ -41,7 +41,7 @@ export class MemoizedComponent<T = any, K = {}> {
     return this._node;
   }
 
-  constructor(vNode: K) {
+  constructor(vNode: MaltaElementBase<K>) {
     this._vNode = vNode;
   }
 
@@ -88,7 +88,10 @@ export class Memo {
     return this._stack.get(component);
   }
 
-  public static push<K>(componentFunc: MaltaComponent, vNode: K): void {
+  public static push<K extends MaltaElementBase<K> = {}>(
+    componentFunc: MaltaComponent,
+    vNode: MaltaElementBase<K>
+  ): void {
     const memoized = new MemoizedComponent(vNode);
     this._stack.set(componentFunc, memoized);
   }

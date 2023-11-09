@@ -1,15 +1,21 @@
-import { MaltaComponent } from "./types";
+import { MaltaComponent, MaltaElementBase } from "./types";
 
-type Update<T = any, K = {}> = (val: {
-  componentFunc?: MaltaComponent;
+type Update<
+  T extends {} = {},
+  K extends MaltaElementBase<K["content"]> = {}
+> = (val: {
+  componentFunc?: MaltaComponent<K>;
   node: T;
   prevVirtualNode: K;
   updatedVirtualNode: K;
 }) => void;
 
 class UI {
-  public static update: Update = (_) => undefined;
-  public static init<T, K = {}>(update: Update<T, K>) {
+  public static update;
+  public static init<
+    T extends {} = {},
+    K extends MaltaElementBase<K["content"]> = {}
+  >(update: Update<T, K>) {
     this.update = update;
   }
 }

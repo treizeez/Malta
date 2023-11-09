@@ -97,7 +97,12 @@ export class VDom {
           const shallow = [...updatedContent];
           for (const index in dirtyPrevContent) {
             if (dirtyPrevContent[index] === 0 && updatedContent[index]) {
-              const mounted = VDom.mount(updatedContent[index]);
+              const mounted = VDom.mount(
+                updatedContent[index] as
+                  | MaltaComponent<MaltaElement>
+                  | MaltaElement
+              );
+
               shallow.splice(Number(index), 1, null);
               toInsert.push({ index: Number(index), mounted });
             }
@@ -132,7 +137,9 @@ export class VDom {
         const indicesToRemove: number[] = [];
         cleanPrevContent.forEach((prev, index) => {
           const fragmentIndex = cleanUpdatedContent.findIndex(
-            (next) => next.key === prev.key
+            (next) =>
+              (next as MaltaFragment<MaltaElement>).key ===
+              (prev as MaltaFragment<MaltaElement>).key
           );
 
           if (fragmentIndex === -1) {
@@ -154,14 +161,18 @@ export class VDom {
       if (cleanUpdatedContent.length > cleanPrevContent.length) {
         const dirtyPrevContent = cleanUpdatedContent.map((item, i) => {
           const foundKey = cleanPrevContent.find(
-            (prev) => prev.key === item.key
+            (prev) =>
+              (prev as MaltaFragment<MaltaElement>).key ===
+              (item as MaltaFragment<MaltaElement>).key
           );
           return foundKey ? item : null;
         });
 
         for (const index in dirtyPrevContent) {
           if (dirtyPrevContent[index] === null) {
-            const mounted = VDom.mount(cleanUpdatedContent[index]);
+            const mounted = VDom.mount(
+              cleanUpdatedContent[index] as MaltaComponent<MaltaElement>
+            );
             cleanUpdatedContent.splice(Number(index), 1, null);
             toInsert.push({ index: Number(index), mounted });
           }
@@ -206,13 +217,13 @@ export class VDom {
               cleanUpdatedContent[index] as MaltaComponent
             );
             this.mount(updatedFunc);
-            const updatedVNode = Memo.get(updatedFunc as MaltaComponent);
-            if (updatedVNode) {
+            const memoUpdated = Memo.get(updatedFunc as MaltaComponent);
+            if (memoUpdated) {
               VDom.update({
                 componentFunc: updatedFunc as MaltaComponent<MaltaElement>,
                 node: node.children[index] as HTMLElement,
                 prevVirtualNode: cleanPrevContent[index] as MaltaElement,
-                updatedVirtualNode: updatedVNode.vNode,
+                updatedVirtualNode: memoUpdated?.vNode as MaltaElement,
               });
             }
           } else if (checkIfComponent(cleanPrevContent[index])) {

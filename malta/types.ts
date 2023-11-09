@@ -54,9 +54,15 @@ export declare type MaltaCss =
       inline?: boolean;
     };
 
-export declare type MaltaFragment<T = {}> = {
+export declare interface MaltaElementBase<T> {
+  content?: T;
+}
+
+export declare type MaltaFragment<T extends MaltaElementBase<T["content"]>> = {
   key: string | number;
   component: () => T;
 };
 
-export declare type MaltaComponent<T = {}> = () => T;
+export declare type MaltaComponent<
+  T extends MaltaElementBase<T["content"]> = {}
+> = () => T;
