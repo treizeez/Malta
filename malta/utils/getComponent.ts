@@ -1,5 +1,6 @@
-import { MaltaComponent } from "../../malta/types";
+import { MaltaComponent, MaltaFragment } from "../../malta/types";
 
-const getComponent = (draft: MaltaComponent) => draft.component || draft;
+const getComponent = (draft: MaltaComponent | MaltaFragment) =>
+  (draft as MaltaFragment).component || draft;
 
 export default getComponent;

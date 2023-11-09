@@ -1,8 +1,10 @@
 import { Memo } from "../Memo";
 import enhanceNode from "./enhanceNode";
-import { MaltaComponent, MaltaElement } from "../types";
+import { MaltaComponent, MaltaElementBase } from "../types";
 
-function createComponent(): MaltaElement {
+function createComponent<
+  T extends MaltaElementBase<T["content"]>
+>(): MaltaElementBase<T["content"]> {
   const componentFunc: MaltaComponent = this;
 
   Memo.resetStack();

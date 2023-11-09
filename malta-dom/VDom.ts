@@ -14,14 +14,14 @@ type mountInput =
 
 export class VDom {
   public static mount(input: mountInput): HTMLElement {
-    const component: MaltaComponent =
+    const component: MaltaComponent<MaltaElement> =
       checkIfComponent(input) &&
       createComponent.bind(getComponent(input as MaltaComponent));
 
-    const vNode: MaltaElement = component
+    const vNode = component
       ? component()
-      : enhanceNode(input as MaltaElement);
-    const dom = new Dom(vNode);
+      : enhanceNode<MaltaElement>(input as MaltaElement);
+    const dom = new Dom(vNode as MaltaElement);
 
     dom.create();
     dom.initEvents();
@@ -216,7 +216,7 @@ export class VDom {
             const updatedFunc = getComponent(
               cleanUpdatedContent[index] as MaltaComponent
             );
-            this.mount(updatedFunc);
+            this.mount(updatedFunc as MaltaComponent<MaltaElement>);
             const memoUpdated = Memo.get(updatedFunc as MaltaComponent);
             if (memoUpdated) {
               VDom.update({

@@ -18,7 +18,7 @@ class Cache {
 }
 
 export class MemoizedComponent<T = any, K extends MaltaElementBase<K> = {}> {
-  private _vNode: MaltaElementBase<K>;
+  private _vNode: MaltaElementBase<K["content"]>;
   private _node: T;
   public mounted: boolean = false;
   public component: MaltaComponent;
@@ -46,7 +46,7 @@ export class MemoizedComponent<T = any, K extends MaltaElementBase<K> = {}> {
   }
 
   public updateVNode(vNode: K): void {
-    this._vNode = enhanceNode(vNode);
+    this._vNode = enhanceNode<K>(vNode);
   }
 
   public updateNode(node: T): void {
