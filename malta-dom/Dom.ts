@@ -1,4 +1,4 @@
-import { MaltaElement } from "../malta/types";
+import { MaltaElement } from "./types";
 
 export class Dom {
   private _vNode: MaltaElement;

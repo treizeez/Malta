@@ -1,3 +1,4 @@
 import State from "./State";
+import Fragment from "./fragment";
 
-export { State };
+export { State, Fragment };

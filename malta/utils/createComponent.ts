@@ -14,6 +14,10 @@ function createComponent(): MaltaElement {
 
   const vNode = componentFunc();
 
+  if (!vNode) {
+    throw new Error("Component must return a valid MaltaElement");
+  }
+
   if (!memoized) {
     Memo.push(componentFunc, vNode);
   }

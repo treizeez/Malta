@@ -1,4 +1,4 @@
-import { State } from "../malta";
+import { State, Fragment } from "../malta";
 import { Render } from "../malta-dom";
 
 const nestedNestedNested = () => {
@@ -49,15 +49,16 @@ const AddTodo = ({ todos, setTodos }) => ({
     ]),
 });
 
-const Todos = ({ todos, setTodos }) => {
+const Todos = ({ todos, setTodos, filter }) => {
   return {
     tag: "div",
     content:
       todos.length > 0
-        ? todos.map((todo) => ({
-            key: todo.key,
-            component: Todo.bind(null, { todo, todos, setTodos }),
-          }))
+        ? todos
+            .filter((todo) => (filter ? todo.id % 2 === 0 : todo))
+            .map((todo) =>
+              Fragment(todo.key, Todo.bind(null, { todo, todos, setTodos }))
+            )
         : {
             tag: "h1",
             textNode: "no todos",
@@ -91,9 +92,12 @@ const App = () => {
 
   const [test, setTest] = State(1);
   const [showDialog, setShowDialog] = State(false);
+  const [showDialog1, setShowDialog1] = State(false);
+  const [filter, setFilter] = State(false);
 
   const state = {
     todos,
+    filter,
     setTodos,
   };
 
@@ -110,8 +114,21 @@ const App = () => {
         textNode: showDialog ? "close" : "open",
         onClick: () => setShowDialog(!showDialog),
       },
+      {
+        tag: "button",
+        textNode: "filter",
+        onclick: () => setFilter(!filter),
+      },
 
       showDialog && Dialog.bind(null),
+      showDialog && Dialog.bind(null),
+      {
+        tag: "button",
+        textNode: showDialog1 ? "close" : "open",
+        onClick: () => setShowDialog1(!showDialog1),
+      },
+
+      showDialog1 && Dialog.bind(null),
       AddTodo.bind(null, state),
       Todos.bind(null, state),
     ],

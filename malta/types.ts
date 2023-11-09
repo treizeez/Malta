@@ -1,58 +1,3 @@
-export declare type MaltaElement =
-  | {
-      [key in `on${keyof GlobalEventHandlersEventMap}`]?: (event: Event) => any;
-    } & {
-      tag: keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap;
-      textNode?: string | boolean | Number;
-      attrs?:
-        | Partial<
-            | HTMLElement
-            | HTMLHyperlinkElementUtils
-            | HTMLIFrameElement
-            | HTMLImageElement
-            | HTMLInputElement
-            | HTMLLIElement
-            | HTMLLabelElement
-            | HTMLLegendElement
-            | HTMLLinkElement
-            | HTMLMapElement
-            | HTMLMediaElement
-            | HTMLMenuElement
-            | HTMLMetaElement
-            | HTMLMeterElement
-            | HTMLModElement
-            | HTMLOListElement
-            | HTMLObjectElement
-            | HTMLOptGroupElement
-            | HTMLOptionElement
-            | HTMLOptionsCollection
-            | HTMLOrSVGElement
-            | HTMLOutputElement
-            | HTMLParagraphElement
-            | HTMLParagraphElement
-            | HTMLPictureElement
-            | HTMLPreElement
-            | HTMLProgressElement
-            | HTMLVideoElement
-            | HTMLVideoElementEventMap
-            | HTMLUnknownElement
-            | HTMLUListElement
-            | HTMLUListElement
-            | HTMLTrackElement
-            | HTMLTitleElement
-            | HTMLTimeElement
-            | HTMLTextAreaElement
-            | HTMLTemplateElement
-            | HTMLSourceElement
-          >
-        | { [key: string]: string };
-      content?:
-        | (MaltaElement | MaltaComponent)[]
-        | MaltaElement
-        | MaltaComponent;
-      style?: MaltaCss;
-    };
-
 type PseudoClass =
   | ":active"
   | "::after"
@@ -109,4 +54,9 @@ export declare type MaltaCss =
       inline?: boolean;
     };
 
-export declare type MaltaComponent = () => MaltaElement;
+export declare type MaltaFragment<T = {}> = {
+  key: string | number;
+  component: () => T;
+};
+
+export declare type MaltaComponent<T = {}> = () => T;
