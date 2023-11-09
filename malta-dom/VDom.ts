@@ -21,6 +21,7 @@ export class VDom {
     const vNode = component
       ? component()
       : enhanceNode<MaltaElement>(input as MaltaElement);
+      
     const dom = new Dom(vNode as MaltaElement);
 
     dom.create();
@@ -210,7 +211,7 @@ export class VDom {
               componentFunc: updatedFunc as MaltaComponent<MaltaElement>,
               node: node.children[index] as HTMLElement,
               prevVirtualNode: prevNode as MaltaElement,
-              updatedVirtualNode: updatedNode as MaltaElement,
+              updatedVirtualNode: enhanceNode<MaltaElement>(updatedNode as MaltaElement),
             });
           } else if (checkIfComponent(cleanUpdatedContent[index])) {
             const updatedFunc = getComponent(

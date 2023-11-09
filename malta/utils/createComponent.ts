@@ -5,7 +5,7 @@ import { MaltaComponent, MaltaElementBase } from "../types";
 function createComponent<
   T extends MaltaElementBase<T["content"]>
 >(): MaltaElementBase<T["content"]> {
-  const componentFunc: MaltaComponent = this;
+  const componentFunc: MaltaComponent<T> = this;
 
   Memo.resetStack();
   const memoized = Memo.get(componentFunc);
@@ -21,7 +21,7 @@ function createComponent<
   }
 
   if (!memoized) {
-    Memo.push(componentFunc, vNode);
+    Memo.push<T>(componentFunc, vNode);
   }
 
   Memo.setStackContext(componentFunc);

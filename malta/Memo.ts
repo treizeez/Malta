@@ -41,7 +41,7 @@ export class MemoizedComponent<T = any, K extends MaltaElementBase<K> = {}> {
     return this._node;
   }
 
-  constructor(vNode: MaltaElementBase<K>) {
+  constructor(vNode: MaltaElementBase<K["content"]>) {
     this._vNode = vNode;
   }
 
@@ -88,11 +88,11 @@ export class Memo {
     return this._stack.get(component);
   }
 
-  public static push<K extends MaltaElementBase<K> = {}>(
-    componentFunc: MaltaComponent,
-    vNode: MaltaElementBase<K>
+  public static push<K extends MaltaElementBase<K["content"]> = {}>(
+    componentFunc: MaltaComponent<K>,
+    vNode: K
   ): void {
-    const memoized = new MemoizedComponent(vNode);
+    const memoized = new MemoizedComponent<K>(vNode);
     this._stack.set(componentFunc, memoized);
   }
 

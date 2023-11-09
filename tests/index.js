@@ -76,6 +76,17 @@ const Dialog = () => {
   };
 };
 
+const Test = () => [
+  {
+    tag: "h1",
+    textNode: "test",
+  },
+  {
+    tag: "h2",
+    textNode: "test",
+  },
+];
+
 const App = () => {
   const [todos, setTodos] = State([
     {
@@ -109,6 +120,7 @@ const App = () => {
         textNode: `Clicked: ${test} times`,
         onClick: () => setTest((prev) => prev + 1),
       },
+      Test.bind(null),
       {
         tag: "button",
         textNode: showDialog ? "close" : "open",
