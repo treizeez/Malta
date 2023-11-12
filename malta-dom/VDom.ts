@@ -14,10 +14,14 @@ const TO_DELETE = "toDelete";
 type mountInput =
   | MaltaComponent<MaltaElement>
   | MaltaElement
-  | MaltaFragment<MaltaElement>;
+  | MaltaFragment<MaltaElement>
+  | string;
 
 export class VDom {
-  public static mount(input: mountInput): HTMLElement {
+  public static mount(input: mountInput): HTMLElement | Text {
+    if (checkIfText(input)) {
+      return document.createTextNode(input as string);
+    }
     const component: MaltaComponent<MaltaElement> =
       checkIfComponent(input) &&
       createComponent.bind(getComponent(input as MaltaComponent));
@@ -102,7 +106,7 @@ export class VDom {
 
       const toInsert: {
         index: number;
-        mounted: HTMLElement;
+        mounted: HTMLElement | Text;
       }[] = [];
 
       if (prevBody.length === updatedBody.length) {

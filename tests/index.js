@@ -136,7 +136,7 @@ const App = () => {
         onClick: () => setShowDialog1(!showDialog1),
       },
 
-      showDialog1 && Dialog.bind(null),
+      showDialog1 && "test",
       AddTodo.bind(null, state),
       Todos.bind(null, state),
       showDialog1 && Dialog.bind(null),
