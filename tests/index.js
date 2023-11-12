@@ -5,7 +5,7 @@ const nestedNestedNested = () => {
   const [state, setState] = State(1);
   return {
     tag: "h3",
-    textNode: `Very very very very very nested clicker${state}`,
+    body: `Very very very very very nested clicker${state}`,
     onclick: () => setState(state + 1),
   };
 };
@@ -15,20 +15,20 @@ const Todo = ({ todo, todos, setTodos }) => {
 
   return {
     tag: "div",
-    content: [
+    body: [
       {
         tag: "h2",
-        textNode: todo.name + todo.id,
+        body: todo.name + todo.id,
       },
       nestedNestedNested.bind(null),
       {
         tag: "button",
-        textNode: test ? "close" : "open",
+        body: test ? "close" : "open",
         onclick: () => setTest(!test),
       },
       {
         tag: "button",
-        textNode: "delete",
+        body: "delete",
         onClick: () => setTodos(todos.filter((t) => t.id !== todo.id)),
       },
     ],
@@ -37,7 +37,7 @@ const Todo = ({ todo, todos, setTodos }) => {
 
 const AddTodo = ({ todos, setTodos }) => ({
   tag: "button",
-  textNode: "Add todo",
+  body: "Add todo",
   onclick: () =>
     setTodos([
       ...todos,
@@ -52,17 +52,14 @@ const AddTodo = ({ todos, setTodos }) => ({
 const Todos = ({ todos, setTodos, filter }) => {
   return {
     tag: "div",
-    content:
+    body:
       todos.length > 0
         ? todos
             .filter((todo) => (filter ? todo.id % 2 === 0 : todo))
             .map((todo) =>
               Fragment(todo.key, Todo.bind(null, { todo, todos, setTodos }))
             )
-        : {
-            tag: "h1",
-            textNode: "no todos",
-          },
+        : "no todos",
   };
 };
 
@@ -71,7 +68,7 @@ const Dialog = () => {
 
   return {
     tag: "div",
-    textNode: state,
+    body: state,
     onclick: () => setState("Im dialog too"),
   };
 };
@@ -114,21 +111,20 @@ const App = () => {
 
   return {
     tag: "div",
-    content: [
+    body: [
       {
         tag: "h1",
-        textNode: `Clicked: ${test} times`,
+        body: `Clicked: ${test} times`,
         onClick: () => setTest((prev) => prev + 1),
       },
-      Test.bind(null),
       {
         tag: "button",
-        textNode: showDialog ? "close" : "open",
+        body: showDialog ? "close" : "open",
         onClick: () => setShowDialog(!showDialog),
       },
       {
         tag: "button",
-        textNode: "filter",
+        body: "filter",
         onclick: () => setFilter(!filter),
       },
 
@@ -136,15 +132,26 @@ const App = () => {
       showDialog && Dialog.bind(null),
       {
         tag: "button",
-        textNode: showDialog1 ? "close" : "open",
+        body: showDialog1 ? "close" : "open",
         onClick: () => setShowDialog1(!showDialog1),
       },
 
       showDialog1 && Dialog.bind(null),
       AddTodo.bind(null, state),
       Todos.bind(null, state),
+      showDialog1 && Dialog.bind(null),
     ],
   };
 };
+
+/*const App = () => {
+  const [state, setState] = State(1);
+
+  return {
+    tag: "h1",
+    body: [state, "test"],
+    onclick: () => setState(state + 1),
+  };
+};*/
 
 Render(App);

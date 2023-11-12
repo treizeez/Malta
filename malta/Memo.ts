@@ -18,10 +18,10 @@ class Cache {
 }
 
 export class MemoizedComponent<T = any, K extends MaltaElementBase<K> = {}> {
-  private _vNode: MaltaElementBase<K["content"]>;
+  private _vNode: K;
   private _node: T;
   public mounted: boolean = false;
-  public component: MaltaComponent;
+  public component: MaltaComponent<K>;
 
   private _memoized: {
     state: Cache;
@@ -41,19 +41,19 @@ export class MemoizedComponent<T = any, K extends MaltaElementBase<K> = {}> {
     return this._node;
   }
 
-  constructor(vNode: MaltaElementBase<K["content"]>) {
+  constructor(vNode: K) {
     this._vNode = vNode;
   }
 
   public updateVNode(vNode: K): void {
-    this._vNode = enhanceNode<K>(vNode);
+    this._vNode = vNode;
   }
 
   public updateNode(node: T): void {
     this._node = node;
   }
 
-  public updateComponent(component: MaltaComponent) {
+  public updateComponent(component: MaltaComponent<K>) {
     this.component = component;
   }
 
@@ -88,7 +88,7 @@ export class Memo {
     return this._stack.get(component);
   }
 
-  public static push<K extends MaltaElementBase<K["content"]> = {}>(
+  public static push<K extends MaltaElementBase<K> = {}>(
     componentFunc: MaltaComponent<K>,
     vNode: K
   ): void {
@@ -114,8 +114,8 @@ export class Memo {
   public static delete(component: MaltaComponent): void {
     const memoizedComponent = this._stack.get(component);
 
-    if (memoizedComponent && Array.isArray(memoizedComponent.vNode.content)) {
-      memoizedComponent.vNode.content.forEach(
+    if (memoizedComponent && Array.isArray(memoizedComponent.vNode?.body)) {
+      memoizedComponent.vNode?.body.forEach(
         (component) =>
           checkIfComponent(component) &&
           this.delete(getComponent(component as MaltaComponent))

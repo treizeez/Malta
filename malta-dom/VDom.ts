@@ -5,7 +5,11 @@ import createComponent from "../malta/utils/createComponent";
 import { MaltaComponent, MaltaFragment } from "../malta/types";
 import checkIfComponent from "../malta/utils/checkIfComponent";
 import getComponent from "../malta/utils/getComponent";
-import { MaltaElement } from "./types";
+import { MaltaElement, MaltaNode } from "./types";
+import checkIfText from "./utils/checkIfText";
+
+const TO_INSERT = "toInsert";
+const TO_DELETE = "toDelete";
 
 type mountInput =
   | MaltaComponent<MaltaElement>
@@ -21,13 +25,12 @@ export class VDom {
     const vNode = component
       ? component()
       : enhanceNode<MaltaElement>(input as MaltaElement);
-      
+
     const dom = new Dom(vNode as MaltaElement);
 
     dom.create();
     dom.initEvents();
     dom.setAttributes();
-    dom.textNode();
 
     if (checkIfComponent(input)) {
       const memoized = Memo.get(getComponent(input as MaltaComponent));
@@ -36,12 +39,16 @@ export class VDom {
       memoized?.mount();
     }
 
-    if (Array.isArray(vNode.content)) {
-      vNode.content.map((content) => {
-        if (content) {
-          const mounted = VDom.mount(content);
-          if (mounted) {
-            dom.node.appendChild(mounted);
+    if (Array.isArray(vNode.body)) {
+      vNode.body.map((body) => {
+        if ((typeof body === "number" && String(body)) || body) {
+          if (typeof body === "string" || typeof body === "number") {
+            dom.node.appendChild(dom.textNode(String(body)));
+          } else {
+            const mounted = VDom.mount(body);
+            if (mounted) {
+              dom.node.appendChild(mounted);
+            }
           }
         }
       });
@@ -58,48 +65,59 @@ export class VDom {
   }: {
     componentFunc?: MaltaComponent<MaltaElement>;
     node: HTMLElement;
-    prevVirtualNode: MaltaElement;
-    updatedVirtualNode: MaltaElement;
+    prevVirtualNode: MaltaElement | string;
+    updatedVirtualNode: MaltaElement | string;
   }) {
-    const { content: updatedContent } = updatedVirtualNode;
-    const { content: prevContent } = prevVirtualNode;
+    if (checkIfText(updatedVirtualNode)) {
+      const textNode = document.createTextNode(updatedVirtualNode as string);
+      node.replaceWith(textNode);
+      return;
+    }
 
-    if (prevVirtualNode.tag !== updatedVirtualNode?.tag) {
+    const { body: updatedBody } = updatedVirtualNode as MaltaElement;
+    const { body: prevBody } = prevVirtualNode as MaltaElement;
+
+    const updatedNode = new Dom(updatedVirtualNode as MaltaElement, node);
+
+    if (
+      (prevVirtualNode as MaltaElement)?.tag !==
+      (updatedVirtualNode as MaltaElement)?.tag
+    ) {
       if (componentFunc) {
         const memoized = Memo.get(componentFunc);
         if (memoized?.node) {
           node.replaceWith(memoized.node);
         }
       } else {
-        const newNode = VDom.mount(updatedVirtualNode);
+        const newNode = VDom.mount(updatedVirtualNode as MaltaElement);
         if (newNode) {
           node.replaceWith(newNode);
         }
       }
     }
 
-    const updatedNode = new Dom(updatedVirtualNode, node);
-
-    if (Array.isArray(updatedContent) && Array.isArray(prevContent)) {
-      let cleanPrevContent = prevContent.filter(Boolean);
-      let cleanUpdatedContent = updatedContent.filter(Boolean);
+    if (Array.isArray(updatedBody) && Array.isArray(prevBody)) {
+      let cleanPrevBody = prevBody.filter(Boolean);
+      let cleanUpdatedBody = updatedBody.filter(Boolean);
 
       const toInsert: {
         index: number;
         mounted: HTMLElement;
       }[] = [];
 
-      if (prevContent.length === updatedContent.length) {
-        if (updatedContent.length > cleanPrevContent.length) {
-          const dirtyPrevContent = prevContent.map((item, i) => {
-            return item === false && updatedContent[i] === false ? item : 0;
-          });
+      if (prevBody.length === updatedBody.length) {
+        if (updatedBody.length > cleanPrevBody.length) {
+          const dirtyPrevBody = prevBody
+            .map((item, i) => {
+              return item === false && updatedBody[i] ? TO_INSERT : item;
+            })
+            .filter(Boolean);
 
-          const shallow = [...updatedContent];
-          for (const index in dirtyPrevContent) {
-            if (dirtyPrevContent[index] === 0 && updatedContent[index]) {
+          const shallow = [...cleanUpdatedBody];
+          for (const index in dirtyPrevBody) {
+            if (dirtyPrevBody[index] === TO_INSERT && cleanUpdatedBody[index]) {
               const mounted = VDom.mount(
-                updatedContent[index] as
+                cleanUpdatedBody[index] as
                   | MaltaComponent<MaltaElement>
                   | MaltaElement
               );
@@ -109,35 +127,36 @@ export class VDom {
             }
           }
 
-          cleanUpdatedContent = shallow.filter(Boolean);
+          cleanUpdatedBody = shallow.filter(Boolean);
         }
 
-        if (prevContent.length > cleanUpdatedContent.length) {
+        if (prevBody.length > cleanUpdatedBody.length) {
           const indiciesToRemove: number[] = [];
-          const shallow = [...prevContent];
-          for (let index = 0; index < prevContent.length; index++) {
-            if (
-              !updatedContent[index] &&
-              typeof updatedContent[index] === "boolean"
-            ) {
-              if (prevContent[index]) {
-                indiciesToRemove.push(index);
-              }
+          const dirtyUpdatedBody = updatedBody
+            .map((item, i) => {
+              return item === false && prevBody[i] ? TO_DELETE : item;
+            })
+            .filter(Boolean);
+
+          const shallow = [...cleanPrevBody];
+          for (const index in dirtyUpdatedBody) {
+            if (dirtyUpdatedBody[index] === TO_DELETE) {
+              indiciesToRemove.push(Number(index));
             }
           }
           indiciesToRemove.reverse().forEach((index) => {
-            shallow.splice(index, 1);
-            cleanPrevContent = shallow.filter(Boolean);
-            node.children[index].remove();
-            VDom.unmount(getComponent(prevContent[index] as MaltaComponent));
+            shallow.splice(index, 1, null);
+            VDom.unmount(getComponent(cleanPrevBody[index] as MaltaComponent));
+            cleanPrevBody = shallow.filter(Boolean);
+            node.childNodes[index].remove();
           });
         }
       }
 
-      if (cleanPrevContent.length > cleanUpdatedContent.length) {
+      if (cleanPrevBody.length > cleanUpdatedBody.length) {
         const indicesToRemove: number[] = [];
-        cleanPrevContent.forEach((prev, index) => {
-          const fragmentIndex = cleanUpdatedContent.findIndex(
+        cleanPrevBody.forEach((prev, index) => {
+          const fragmentIndex = cleanUpdatedBody.findIndex(
             (next) =>
               (next as MaltaFragment<MaltaElement>).key ===
               (prev as MaltaFragment<MaltaElement>).key
@@ -148,20 +167,20 @@ export class VDom {
           }
         });
         indicesToRemove.reverse().forEach((index) => {
-          const componentToRemove = cleanPrevContent[index];
-          const domElementToRemove = node.children[index];
+          const componentToRemove = cleanPrevBody[index];
+          const domElementToRemove = node.childNodes[index];
 
           if (componentToRemove && domElementToRemove) {
             VDom.unmount(getComponent(componentToRemove as MaltaComponent));
-            cleanPrevContent.splice(index, 1);
+            cleanPrevBody.splice(index, 1);
             node.removeChild(domElementToRemove);
           }
         });
       }
 
-      if (cleanUpdatedContent.length > cleanPrevContent.length) {
-        const dirtyPrevContent = cleanUpdatedContent.map((item, i) => {
-          const foundKey = cleanPrevContent.find(
+      if (cleanUpdatedBody.length > cleanPrevBody.length) {
+        const dirtyPrevBody = cleanUpdatedBody.map((item, i) => {
+          const foundKey = cleanPrevBody.find(
             (prev) =>
               (prev as MaltaFragment<MaltaElement>).key ===
               (item as MaltaFragment<MaltaElement>).key
@@ -169,30 +188,30 @@ export class VDom {
           return foundKey ? item : null;
         });
 
-        for (const index in dirtyPrevContent) {
-          if (dirtyPrevContent[index] === null) {
+        for (const index in dirtyPrevBody) {
+          if (dirtyPrevBody[index] === null) {
             const mounted = VDom.mount(
-              cleanUpdatedContent[index] as MaltaComponent<MaltaElement>
+              cleanUpdatedBody[index] as MaltaComponent<MaltaElement>
             );
-            cleanUpdatedContent.splice(Number(index), 1, null);
+            cleanUpdatedBody.splice(Number(index), 1, null);
             toInsert.push({ index: Number(index), mounted });
           }
         }
 
-        cleanUpdatedContent = cleanUpdatedContent.filter(Boolean);
+        cleanUpdatedBody = cleanUpdatedBody.filter(Boolean);
       }
 
-      for (let index = 0; index < cleanPrevContent.length; index++) {
-        if (cleanPrevContent[index] && cleanUpdatedContent[index]) {
+      for (let index = 0; index < cleanPrevBody.length; index++) {
+        if (cleanPrevBody[index] && cleanUpdatedBody[index]) {
           if (
-            checkIfComponent(cleanUpdatedContent[index]) &&
-            checkIfComponent(cleanPrevContent[index])
+            checkIfComponent(cleanUpdatedBody[index]) &&
+            checkIfComponent(cleanPrevBody[index])
           ) {
             const prevFunc = getComponent(
-              cleanPrevContent[index] as MaltaComponent
+              cleanPrevBody[index] as MaltaComponent
             );
             const updatedFunc = getComponent(
-              cleanUpdatedContent[index] as MaltaComponent
+              cleanUpdatedBody[index] as MaltaComponent
             );
 
             Memo.replace(
@@ -209,60 +228,70 @@ export class VDom {
 
             VDom.update({
               componentFunc: updatedFunc as MaltaComponent<MaltaElement>,
-              node: node.children[index] as HTMLElement,
-              prevVirtualNode: prevNode as MaltaElement,
-              updatedVirtualNode: enhanceNode<MaltaElement>(updatedNode as MaltaElement),
+              node: node.childNodes[index] as HTMLElement,
+              prevVirtualNode: enhanceNode<MaltaElement>(
+                prevNode as MaltaElement
+              ),
+              updatedVirtualNode: updatedNode as MaltaElement,
             });
-          } else if (checkIfComponent(cleanUpdatedContent[index])) {
+          } else if (checkIfComponent(cleanUpdatedBody[index])) {
             const updatedFunc = getComponent(
-              cleanUpdatedContent[index] as MaltaComponent
+              cleanUpdatedBody[index] as MaltaComponent
             );
             this.mount(updatedFunc as MaltaComponent<MaltaElement>);
             const memoUpdated = Memo.get(updatedFunc as MaltaComponent);
             if (memoUpdated) {
               VDom.update({
                 componentFunc: updatedFunc as MaltaComponent<MaltaElement>,
-                node: node.children[index] as HTMLElement,
-                prevVirtualNode: cleanPrevContent[index] as MaltaElement,
+                node: node.childNodes[index] as HTMLElement,
+                prevVirtualNode: enhanceNode<MaltaElement>(
+                  cleanPrevBody[index] as MaltaElement
+                ),
                 updatedVirtualNode: memoUpdated?.vNode as MaltaElement,
               });
             }
-          } else if (checkIfComponent(cleanPrevContent[index])) {
-            const prevFunc = checkIfComponent(cleanPrevContent[index]);
+          } else if (checkIfComponent(cleanPrevBody[index])) {
+            const prevFunc = checkIfComponent(cleanPrevBody[index]);
             const memoPrevNode = Memo.get(prevFunc as MaltaComponent);
             if (memoPrevNode) {
               VDom.update({
-                node: node.children[index] as HTMLElement,
+                node: node.childNodes[index] as HTMLElement,
                 prevVirtualNode: memoPrevNode.vNode as MaltaElement,
-                updatedVirtualNode: cleanUpdatedContent[index] as MaltaElement,
+                updatedVirtualNode: enhanceNode<MaltaElement>(
+                  cleanUpdatedBody[index] as MaltaElement
+                ),
               });
+            }
+          } else if (checkIfText(cleanUpdatedBody[index])) {
+            if (
+              String(cleanPrevBody[index]) !== String(cleanUpdatedBody[index])
+            ) {
+              const textNode = updatedNode.textNode(
+                String(cleanUpdatedBody[index])
+              );
+              node.childNodes[index].replaceWith(textNode);
             }
           } else {
             VDom.update({
-              node: node.children[index] as HTMLElement,
-              prevVirtualNode: cleanPrevContent[index] as MaltaElement,
-              updatedVirtualNode: cleanUpdatedContent[index] as MaltaElement,
+              node: node.childNodes[index] as HTMLElement,
+              prevVirtualNode: enhanceNode<MaltaElement>(
+                cleanPrevBody[index] as MaltaElement
+              ),
+              updatedVirtualNode: enhanceNode<MaltaElement>(
+                cleanUpdatedBody[index] as MaltaElement
+              ),
             });
           }
         }
       }
 
       toInsert.forEach(({ index, mounted }) => {
-        node.insertBefore(mounted, node.children[index]);
+        node.insertBefore(mounted, node.childNodes[index]);
       });
     }
 
     updatedNode.initEvents();
     updatedNode.setAttributes();
-
-    if (prevVirtualNode.textNode !== updatedVirtualNode.textNode) {
-      const nodes = node?.childNodes;
-      for (const i in nodes) {
-        if (nodes[i].nodeName === "#text") {
-          nodes[i].nodeValue = String(updatedVirtualNode.textNode);
-        }
-      }
-    }
   }
 
   public static unmount(component: MaltaComponent) {

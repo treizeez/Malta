@@ -1,14 +1,14 @@
 import { MaltaElementBase } from "../types";
 
-const enhanceNode = <T extends MaltaElementBase<T["content"]>>(vNode: T): T => {
-  if (vNode.content && !Array.isArray(vNode.content)) {
+const enhanceNode = <T extends MaltaElementBase<T>>(vNode: T): T => {
+  if (vNode?.body && !Array.isArray(vNode.body)) {
     return {
       ...vNode,
-      content: [vNode.content],
+      body: [vNode.body],
     };
   }
-  if (vNode.content && Array.isArray(vNode.content)) {
-    vNode.content = vNode.content.flat(Infinity);
+  if (vNode?.body && Array.isArray(vNode.body)) {
+    vNode.body = vNode.body.flat(Infinity);
   }
 
   return vNode;

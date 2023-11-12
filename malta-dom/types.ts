@@ -14,11 +14,11 @@ export declare type MaltaNode =
   | MaltaElement
   | MaltaElement[]
   | null
-  | null[]
   | string
   | string[];
 
-export declare interface MaltaElement extends MaltaElementBase<MaltaNode> {
+export declare interface MaltaElement
+  extends MaltaElementBase<{ body?: MaltaNode }> {
   tag: keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap;
   textNode?: string | boolean | Number;
   attrs?:

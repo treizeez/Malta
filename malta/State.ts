@@ -2,6 +2,7 @@ import UI from "./UI";
 import Stack from "./Stack";
 import { Memo } from "./Memo";
 import { MaltaComponent } from "./types";
+import enhanceNode from "./utils/enhanceNode";
 
 const StateStack = new Stack();
 
@@ -26,7 +27,7 @@ function State<T>(arg: T): [T, (value: T | ((prev: T) => T)) => void] {
         const memoizedComponent = Memo.get(componentFunc);
         if (memoizedComponent) {
           memoizedComponent.memoized.state.setState(index, initialValue);
-          const prevVirtualNode = memoizedComponent.vNode;
+          const prevVirtualNode = enhanceNode(memoizedComponent.vNode);
           const updatedVirtualNode = memoizedComponent.component();
           UI.update({
             updatedVirtualNode,
