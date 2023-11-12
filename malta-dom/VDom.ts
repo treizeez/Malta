@@ -137,17 +137,14 @@ export class VDom {
               return item === false && prevBody[i] ? TO_DELETE : item;
             })
             .filter(Boolean);
-
-          const shallow = [...cleanPrevBody];
           for (const index in dirtyUpdatedBody) {
             if (dirtyUpdatedBody[index] === TO_DELETE) {
               indiciesToRemove.push(Number(index));
             }
           }
           indiciesToRemove.reverse().forEach((index) => {
-            shallow.splice(index, 1, null);
             VDom.unmount(getComponent(cleanPrevBody[index] as MaltaComponent));
-            cleanPrevBody = shallow.filter(Boolean);
+            cleanPrevBody.splice(index, 1);
             node.childNodes[index].remove();
           });
         }
